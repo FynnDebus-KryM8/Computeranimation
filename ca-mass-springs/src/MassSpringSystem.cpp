@@ -329,6 +329,54 @@ void MassSpringSystem::compute_forces()
         for (Particle& p : particles)
             p.force += vec2(0.0, -9.81) * particle_mass_;
 
+    // damping force
+    for (Particle& p : particles) {
+        p.force += -damping_ * p.velocity;
+    }
+
+    // Force based collisions
+    if (collisions_ == Force_based) {
+        for (Particle& p : particles) {
+            float dist_b = dot((p.position - vec2(0, -1)), vec2(0, 1));
+            float dist_l = dot((p.position - vec2(1, 0)), vec2(-1, 0));
+            float dist_t = dot((p.position - vec2(0, 1)), vec2(0, -1));
+            float dist_r = dot((p.position - vec2(-1, 0)), vec2(1, 0));
+
+            if (dist_t < 0.0)
+                p.force += 10.0*collision_stiffness_ * -dist_t * vec2(0, -1);
+            if (dist_r < 0.0)
+                p.force += 10.0*collision_stiffness_ * -dist_r * vec2(1, 0);
+            if (dist_b < 0.0)
+                p.force += 10.0*collision_stiffness_ * -dist_b * vec2(0, 1);
+            if (dist_l < 0.0)
+                p.force += 10.0*collision_stiffness_ * -dist_l * vec2(-1, 0);
+        }
+    }
+
+    // Spring forces
+    for (Spring& s : springs) {
+        vec2 normalized_spring_direction = (s.particle0.position-s.particle1.position)/s.length();
+        float stiffness_force = spring_stiffness_ * (s.length() - s.rest_length);
+        //float damping_force = spring_damping_ * dot(s.particle0.velocity - s.particle1.velocity, s.particle0.position - s.particle1.position)/s.length();
+        float damping_force = spring_damping_ * dot(s.particle0.velocity - s.particle1.velocity, normalized_spring_direction);
+        vec2 p0_force = -(stiffness_force + damping_force) * normalized_spring_direction;
+        s.particle0.force += p0_force;
+        s.particle1.force += -p0_force;
+    }
+
+    // Area forces
+    for (Triangle& t : triangles) {
+        vec2 p0_force = -0.5 * area_stiffness_ * (t.area() - t.rest_area) * cmult((t.particle2.position - t.particle1.position), vec2(1, -1));
+        vec2 p1_force = -0.5 * area_stiffness_ * (t.area() - t.rest_area) * cmult((t.particle0.position - t.particle2.position), vec2(1, -1));
+        vec2 p2_force = -0.5 * area_stiffness_ * (t.area() - t.rest_area) * cmult((t.particle1.position - t.particle0.position), vec2(1, -1));
+
+        t.particle0.force += p0_force;
+        t.particle1.force += p1_force;
+        t.particle2.force += p2_force;
+    }
+
+
+
     /** \todo Compute and sum up all forces for each particle.
      * - gravity is already computed above
      * - compute damping forces
