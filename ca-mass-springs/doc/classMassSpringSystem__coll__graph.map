@@ -1,0 +1,7 @@
+<map id="MassSpringSystem" name="MassSpringSystem">
+<area shape="rect" id="Node000001" title=" " alt="" coords="130,94,265,120"/>
+<area shape="rect" id="Node000002" href="$structMassSpringSystem_1_1MouseSpring.html" title="the interactive spring controlled by the mouse" alt="" coords="5,5,225,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="137,41,161,68,186,91,182,95,157,72,133,45"/>
+<area shape="rect" id="Node000003" href="$classSphere.html" title=" " alt="" coords="249,5,312,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="271,46,253,72,222,95,219,91,249,68,266,43"/>
+</map>
