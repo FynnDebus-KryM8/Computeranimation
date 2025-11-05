@@ -366,13 +366,26 @@ void MassSpringSystem::compute_forces()
 
     // Area forces
     for (Triangle& t : triangles) {
-        vec2 p0_force = -0.5 * area_stiffness_ * (t.area() - t.rest_area) * cmult((t.particle2.position - t.particle1.position), vec2(1, -1));
-        vec2 p1_force = -0.5 * area_stiffness_ * (t.area() - t.rest_area) * cmult((t.particle0.position - t.particle2.position), vec2(1, -1));
-        vec2 p2_force = -0.5 * area_stiffness_ * (t.area() - t.rest_area) * cmult((t.particle1.position - t.particle0.position), vec2(1, -1));
+        vec2 p0_factor = t.particle2.position - t.particle1.position;
+        vec2 p1_factor = t.particle0.position - t.particle2.position;
+        vec2 p2_factor = t.particle1.position - t.particle0.position;
+        vec2 p0_force = -0.5 * area_stiffness_ * (t.area() - t.rest_area) * vec2(-p0_factor[1], p0_factor[0]);
+        vec2 p1_force = -0.5 * area_stiffness_ * (t.area() - t.rest_area) * vec2(-p1_factor[1], p1_factor[0]);
+        vec2 p2_force = -0.5 * area_stiffness_ * (t.area() - t.rest_area) * vec2(-p2_factor[1], p2_factor[0]);
 
         t.particle0.force += p0_force;
         t.particle1.force += p1_force;
         t.particle2.force += p2_force;
+    }
+
+    if (mouse_spring_.active == true) {
+        vec2 m_pos = mouse_spring_.mouse_position;
+        Particle& p = particles[mouse_spring_.particle_index];
+
+        vec2 normalized_spring_direction = (p.position-m_pos)/norm(p.position - m_pos);
+        float stiffness_force = mouse_spring_.stiffness * norm(p.position - m_pos);
+        float damping_force = mouse_spring_.damping * dot(p.velocity - m_pos, normalized_spring_direction);
+        p.force += -(stiffness_force + damping_force) * normalized_spring_direction;
     }
 
 
