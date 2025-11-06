@@ -442,6 +442,26 @@ void MassSpringSystem::time_integration()
 
         case Midpoint:
         {
+
+            compute_forces();
+
+            for (Particle& p: particles)
+                if (!p.locked) {
+                    p.position_t = p.position;
+                    p.velocity_t = p.velocity;
+                    p.position += (dt/2) * p.velocity;
+                    p.velocity += (dt/2) * p.force / p.mass;
+                }
+
+            compute_forces();
+
+            for (Particle& p: particles) {
+                if (!p.locked) {
+                    p.position = p.position_t + dt * p.velocity;
+                    p.velocity = p.velocity_t + dt * p.force / p.mass;
+                }
+            }
+
             /**
              * \todo Implement the Midpoint time integration scheme.
              * - The Particle class has variables `position_t` and `velocity_t` to store
@@ -454,6 +474,21 @@ void MassSpringSystem::time_integration()
 
         case Verlet:
         {
+            compute_forces();
+            for (Particle& p : particles) {
+                if (!p.locked) {
+                    p.position += dt * p.velocity + (dt*dt)/2 * (p.force / p.mass);
+                    p.acceleration = p.force / p.mass;
+                }
+            }
+            compute_forces();
+
+            for (Particle& p : particles) {
+                if (!p.locked) {
+                    p.velocity += dt * ((p.acceleration + (p.force / p.mass))/2);
+                }
+            }
+
             /**
              * \todo Implement the Velocity Verlet time integration scheme.
              * - The Particle class has a variable acceleration to remember the 
