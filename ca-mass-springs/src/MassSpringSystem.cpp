@@ -462,13 +462,6 @@ void MassSpringSystem::time_integration()
                 }
             }
 
-            /**
-             * \todo Implement the Midpoint time integration scheme.
-             * - The Particle class has variables `position_t` and `velocity_t` to store
-             *   current values.
-             * - Hint: `compute_forces()` computes all forces for the current positions and
-             *   velocities.
-             */
             break;
         }
 
@@ -489,13 +482,6 @@ void MassSpringSystem::time_integration()
                 }
             }
 
-            /**
-             * \todo Implement the Velocity Verlet time integration scheme.
-             * - The Particle class has a variable acceleration to remember the 
-             *   acceleration of the previous time step
-             * - `compute_forces()` computes all forces for the current positions and
-             *   velocities.
-             */
             break;
         }
     }
@@ -514,6 +500,30 @@ void MassSpringSystem::time_integration()
 
 void MassSpringSystem::impulse_based_collisions()
 {
+    for (Particle& p : particles) {
+        vec2 normal;
+
+        if (p.position[0] < -1.0) {
+            normal = vec2(1,0);
+        } else if (p.position[0] > 1.0) {
+            normal = vec2(-1,0);
+        } else if (p.position[1] < -1.0) {
+            normal = vec2(0,1);
+        }else if (p.position[1] > 1.0) {
+            normal = vec2(0,-1);
+        } else {
+            continue;
+        }
+
+        if (dot(normal, p.velocity) < 0.0) {
+            vec2 mirrored_delta_v = normal * dot(normal, -p.velocity);
+            // std::cout << "new calculation" << std::endl;
+            // std::cout << mirrored_delta_v << std::endl;
+            // std::cout << p.velocity << std::endl;
+            p.velocity += (1.0-collision_damping_) * mirrored_delta_v;
+            // std::cout << p.velocity << std::endl;
+        }
+    }
     /** \todo Handle collisions based on impulses
      *   - detect whether a particle collides with one of the walls
      *   - detect whether the contact is colliding, i.e., whether
