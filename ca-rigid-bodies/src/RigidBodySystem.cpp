@@ -360,6 +360,11 @@ void RigidBodySystem::compute_forces()
      */
     for (auto &b : bodies_)
     {
+        if (use_gravity_) {
+            b.force += vec2(0.0, -9.81) * b.mass;
+        }
+        b.force += -damping_ * b.linear_velocity;
+        b.torque += -damping_ * b.angular_velocity;
     }
 
     // mouse spring force
@@ -387,6 +392,8 @@ void RigidBodySystem::compute_forces()
 
 void RigidBodySystem::time_integration()
 {
+    float dt = time_step_;
+
     // compute all forces
     compute_forces();
 
@@ -399,7 +406,17 @@ void RigidBodySystem::time_integration()
     // update positions and velocities
     for (auto &b : bodies_)
     {
-        /** \todo To implement explicit Euler time integration:
+        if (use_linear_dynamics_) {
+            b.position += dt * b.linear_velocity;
+            b.linear_velocity += dt * b.force / b.mass; // b.mass^-1 * b.force =^= M^-1*F
+        }
+
+        if (use_angular_dynamics_) {
+            b.orientation += dt * b.angular_velocity;
+            b.angular_velocity += dt * b.torque / b.inertia;
+        }
+
+        /** \todo To implement explicit Euler time integration: done!
          * - Update position and orientation
          * - Update linear and angular velocities
          * - Optional: To make use of the GUI checkboxes, update linear parameters only
@@ -421,6 +438,35 @@ void RigidBodySystem::handle_wall_collisions()
 {
     for (auto &b : bodies_)
     {
+        vec2 collision_point = vec2(0.0, 0.0);
+        float collision_count = 0.0;
+        vec2 collision_normal = vec2(0.0, 0.0);
+
+        for (auto &p : b.points) {
+            for (auto &w : walls_) {
+                if (dot(p - w.p0, w.normal) < 0.0) {
+                    collision_count++;
+                    collision_point += p;
+                    collision_normal += w.normal;
+                }
+            }
+        }
+        if (collision_count == 0.0) continue;
+        collision_point /= collision_count;
+        collision_normal /= collision_count;
+        collision_normal = normalize(collision_normal);
+
+        vec2 r_body_p = perp(collision_point - b.position);
+        double v_rel = dot(collision_normal, b.linear_velocity + b.angular_velocity * r_body_p);
+
+        if (v_rel < 0.0) { // colliding contact
+            double w_body = 1/b.mass + dot(collision_normal, dot(collision_normal, r_body_p) * r_body_p)/b.inertia;
+            double j = -(1 + collision_elasticity_) * v_rel/w_body;
+
+            b.linear_velocity += j * collision_normal / b.mass;
+            b.angular_velocity += dot(j * collision_normal, r_body_p) / b.inertia;
+        }
+
         /**
          * \todo Handle collisions of body `b` and walls `walls_` based on impulses.
          * - Find out whether a rigid body is (partially) inside a wall
