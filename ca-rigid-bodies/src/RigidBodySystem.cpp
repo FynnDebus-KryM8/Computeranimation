@@ -570,49 +570,25 @@ bool RigidBodySystem::detect_collision(RigidBody &b1, RigidBody &b2,
 bool RigidBodySystem::is_point_in_body(const vec2 &p, const RigidBody &body,
                                        vec2 &normal)
 {
-    vec2 smallest_normal = normalize(perp(body.points[0] - body.points[1 % body.points.size()])); // keeps track of closest normal
-    double smallest_distance_to_edge = abs(dot(p - body.points[0], smallest_normal));
-
-    int test_track_i = 0;
     // THIS PART ASSUMES THAT THE RIGID BODY IS CONVEX
 
-    // std::cout << "new shape with corner count: " << body.points.size() << std::endl;
-    // std::cout << "new shape with position: " << body.position << std::endl;
-    // std::cout << "p is: " << p << std::endl;
-
+    vec2 smallest_normal = normalize(perp(body.points[0] - body.points[1 % body.points.size()])); // keeps track of closest normal
+    double smallest_distance_to_edge = abs(dot(p - body.points[0], smallest_normal));
+    
     for (int i = 0, N = body.points.size(); i < N; ++i) {
         vec2 edge_normal = normalize(perp(body.points[i] - body.points[(i+1) % N]));
-        double distance_to_normal = dot(p - body.points[i], edge_normal);
+        const double distance_to_normal = dot(p - body.points[i], edge_normal);
 
-        // if (abs(edge_normal[0]-0.6) < 1e-3 && abs(edge_normal[1]-0.8) < 1e-3) {
-        //     std::cout << "shape with corner count: " << body.points.size() << std::endl;
-        //     std::cout << "p is: " << p << std::endl;
-        //     std::cout << "i is: " << i << std::endl;
-        //     std::cout << "points of edge: " << body.points[i] << ", " << body.points[(i+1) % N] << std::endl;
-        //     std::cout << "edge_normal of index: " << i << " is: " << edge_normal << std::endl;
-        //     std::cout << "distance to normal is: " << distance_to_normal << std::endl;
-        // }
+        if (distance_to_normal > 0.0) return false;
 
-        if (distance_to_normal > 0.0) {
-            // std::cout << "false returned" << std::endl;
-            // std::cout << "shape with corner count: " << body.points.size() << std::endl;
-            // std::cout << "p is: " << p << std::endl;
-            // std::cout << "i is: " << i << std::endl;
-            // std::cout << "points of edge: " << body.points[i] << ", " << body.points[(i+1) % N] << std::endl;
-            // std::cout << "edge_normal of index: " << i << " is: " << edge_normal << std::endl;
-            return false;
-        }
-
-        // std::cout << "edge_normal of " << i << " : " << edge_normal << std::endl;
-        //
-        //  std::cout << "edge norm: " << norm(edge_normal) << "vector: " << edge_normal << std::endl;
-        //  std::cout << "smallest norm: " << norm(normal) << "vector: " << normal << std::endl;
         if (abs(distance_to_normal) < abs(smallest_distance_to_edge)) {
-            test_track_i = i;
             smallest_distance_to_edge = distance_to_normal;
             smallest_normal = edge_normal;
         }
     }
+
+    normal = smallest_normal;
+    return true;
     /**
      * \todo Test whether point `p` is inside the convex object `body` and store the collision normal in `normal`.
      * Return true in case of a collision. 
@@ -625,22 +601,6 @@ bool RigidBodySystem::is_point_in_body(const vec2 &p, const RigidBody &body,
      * 
      * Note: The code assumes that the rigid body is convex!
      */
-
-    normal = smallest_normal;
-    // std::cout << "collision detected with normal: " << normal << std::endl;
-    // std::cout << "collision detected at i: " << test_track_i << std::endl;
-    // std::cout << "shape with corner count: " << body.points.size() << std::endl;
-    // std::cout << "points of edge: " << body.points[test_track_i] << ", " << body.points[(test_track_i+1) % static_cast<int>(body.points.size())] << std::endl;
-    // std::cout << "smallest distance was: " << smallest_distance_to_edge << std::endl;
-    //
-    // std::cout << "possible distances are: " << std::endl;
-    // for (int i = 0, N = body.points.size(); i < N; ++i) {
-    //     vec2 edge_normal = normalize(perp(body.points[i] - body.points[(i+1) % N]));
-    //     double distance_to_normal = dot(p - body.points[i], edge_normal);
-    //     std::cout << "i: " << i << "with distance: " << distance_to_normal << std::endl;
-    // }
-
-    return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -649,55 +609,27 @@ void RigidBodySystem::resolve_collision(RigidBody &b1, RigidBody &b2,
                                         const vec2 &collision_point,
                                         const vec2 &collision_normal)
 {
-
-    // std::cout << "collision normal: " << collision_normal << std::endl;
-    // std::cout << "collision püoint: " << collision_point << std::endl;
-
     vec2 r_1_p = perp(collision_point - b1.position);
     vec2 r_2_p = perp(collision_point - b2.position);
     double v_rel = dot(collision_normal, b1.linear_velocity + b1.angular_velocity * r_1_p) - dot(collision_normal, b2.linear_velocity + b2.angular_velocity * r_2_p);
-
-    // std::cout << "v_rel: " << v_rel << std::endl;
-    // std::cout << "part1: " << dot(collision_normal, b1.linear_velocity + b1.angular_velocity * r_1_p) << std::endl;
-    // std::cout << "part2: " << dot(collision_normal, b2.linear_velocity + b2.angular_velocity * r_2_p) << std::endl;
 
     if (v_rel < 0.0) { // colliding contact
         double w_1 = 1/b1.mass + dot(collision_normal, dot(collision_normal, r_1_p) * r_1_p)/b1.inertia;
         double w_2 = 1/b2.mass + dot(collision_normal, dot(collision_normal, r_2_p) * r_2_p)/b2.inertia;
         double j = -(1 + collision_elasticity_) * v_rel/(w_1 + w_2);
 
-        // std::cout << "b1 before: " << std::endl;
-        // std::cout << b1.linear_velocity << std::endl;
-        // std::cout << b1.angular_velocity << std::endl;
-        //
-        // std::cout << "b2: " << std::endl;
-        // std::cout << b2.linear_velocity << std::endl;
-        // std::cout << b2.angular_velocity << std::endl;
-        // std::cout << "next: " << std::endl;
-
         b1.linear_velocity += j * collision_normal / b1.mass;
         b1.angular_velocity += dot(j * collision_normal, r_1_p) / b1.inertia;
 
         b2.linear_velocity -= j * collision_normal / b2.mass;
         b2.angular_velocity -= dot(j * collision_normal, r_2_p) / b2.inertia;
-
-        // std::cout << "b1 after: " << std::endl;
-        // std::cout << b1.linear_velocity << std::endl;
-        // std::cout << b1.angular_velocity << std::endl;
-        //
-        // std::cout << "b2: " << std::endl;
-        // std::cout << b2.linear_velocity << std::endl;
-        // std::cout << b2.angular_velocity << std::endl;
-        // std::cout << "next: " << std::endl;
     }
-
     /**
      * \todo Handle impulse-based object-object collisions:
      * - Check the relative velocity to make sure that the objects do not already separate
      * - If there is a colliding collision, set `colliding=true` to trigger the object explosions.
      * - Apply the impulse-based collision response to both bodies.
      */
-
 }
 
 //=============================================================================
