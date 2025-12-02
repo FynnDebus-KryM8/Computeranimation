@@ -570,11 +570,9 @@ bool RigidBodySystem::detect_collision(RigidBody &b1, RigidBody &b2,
 bool RigidBodySystem::is_point_in_body(const vec2 &p, const RigidBody &body,
                                        vec2 &normal)
 {
-    // THIS PART ASSUMES THAT THE RIGID BODY IS CONVEX
-
     vec2 smallest_normal = normalize(perp(body.points[0] - body.points[1 % body.points.size()])); // keeps track of closest normal
     double smallest_distance_to_edge = abs(dot(p - body.points[0], smallest_normal));
-    
+
     for (int i = 0, N = body.points.size(); i < N; ++i) {
         vec2 edge_normal = normalize(perp(body.points[i] - body.points[(i+1) % N]));
         const double distance_to_normal = dot(p - body.points[i], edge_normal);
